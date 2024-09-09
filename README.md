@@ -15,3 +15,10 @@ Jupyter
 Dashboards
 
 - a dashboard using the 'significant terms' function for anomaly detection in cloudtrail events
+  
+Getting Started:
+
+1. Download and install Anaconda (https://www.anaconda.com/) or start a cloud instance
+2. Download the repo and unzip
+3. Start Jupyter Lab in a virtual environment 
+4. Open the notebooks (you may need to install some of the dependencies in the first few cells)
