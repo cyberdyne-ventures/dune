@@ -1,0 +1,161 @@
+<form version="1.1" theme="dark">
+  <label>Cloudtrail Insights</label>
+  <fieldset submitButton="false">
+    <input type="time" token="timepicker">
+      <label></label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="text" token="filter">
+      <label>search filter (IE: "NOT arn="arn1")</label>
+      <initialValue>*</initialValue>
+      <default>*</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Action Count</title>
+      <chart>
+        <search>
+          <query>index=cloudtrail NOT action=AssumeRole | timechart count by action limit=0</query>
+          <earliest>$timepicker.earliest$</earliest>
+          <latest>$timepicker.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Rare Actions / Agents / Sources by ARN</title>
+      <table>
+        <search>
+          <query>index=cloudtrail NOT action=AssumeRole $filter$ | eval tactics = mvappend(tactic1,tactic2) , tactics = mvfilter(match(tactics,"[^-]")) | stats count values(tactics) as tactics dc(action) as "dc_actions" values(action) as action dc(src) as dc_src values(src) as sources dc(agent) as dc_agents values(agent) as agents by arn | sort + count</query>
+          <earliest>$timepicker.earliest$</earliest>
+          <latest>$timepicker.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <condition field="count"></condition>
+          <condition field="dc_actions"></condition>
+          <condition field="dc_src"></condition>
+          <condition field="dc_agents"></condition>
+          <condition>
+          <set token="arn">$row.arn$</set>
+          <set token="arn_field">$click.name2$</set>
+          <set token="arn_value">$click.value2$</set>
+          <eval token="arn_field">case(arn_field="tactics","tactic1",arn_field="sources","src",arn_field="agents","agent",true(),arn_field)</eval>
+          <eval token="arn_tactic2">if(arn_field="tactic1","OR tactic2=\"".arn_value."\"","*")</eval>
+          </condition>
+        </drilldown>
+      </table>
+    </panel>
+    <panel depends="$arn$">
+      <title>$arn$ + $arn_field$:$arn_value$</title>
+      <table>
+        <search>
+          <query>index=cloudtrail arn="$arn$" $arn_field$="$arn_value$" $arn_tactic2$ NOT action=AssumeRole $filter$ | eval tactics = mvappend(tactic1,tactic2) , tactics = mvfilter(match(tactics,"[^-]")) | stats values(tactics) as tactics values(action) as action values(src) as src values(agent) as agent by _time,arn | sort + count </query>
+          <earliest>$timepicker.earliest$</earliest>
+          <latest>$timepicker.latest$</latest>
+        </search>
+        <drilldown>
+          <unset token="arn"></unset>
+          <unset token="arn_field"></unset>
+          <unset token="arn_value"></unset>
+          <unset token="arn_tactic2"></unset>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Rare Actions / ARNs / Sources by Agent</title>
+      <table>
+        <search>
+          <query>index=cloudtrail NOT action=AssumeRole $filter$ | eval tactics = mvappend(tactic1,tactic2) , tactics = mvfilter(match(tactics,"[^-]")) | stats count as "count" values(tactics) as tactics dc(action) as "dc_actions" values(action) as action dc(src) as dc_src values(src) as sources dc(arn) as dc_arns values(arn) as arn by agent | sort + count</query>
+          <earliest>$timepicker.earliest$</earliest>
+          <latest>$timepicker.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <condition field="count"></condition>
+          <condition field="dc_actions"></condition>
+          <condition field="dc_src"></condition>
+          <condition field="dc_arns"></condition>
+          <condition>
+          <set token="agent">$row.agent$</set>
+          <set token="agent_field">$click.name2$</set>
+          <set token="agent_value">$click.value2$</set>
+          <eval token="agent_field">case(agent_field="tactics","tactic1",agent_field="sources","src",true(),agent_field)</eval>
+          <eval token="agent_tactic2">if(agent_field="tactic1","OR tactic2=\"".agent_value."\"","*")</eval>
+          </condition>
+        </drilldown>
+      </table>
+    </panel>
+    <panel depends="$agent$">
+      <title>$agent$ + $agent_field$:$agent_value$</title>
+      <table>
+        <search>
+          <query>index=cloudtrail agent="$agent$" $agent_field$="$agent_value$" $agent_tactic2$ NOT action=AssumeRole $filter$ | eval tactics = mvappend(tactic1,tactic2) , tactics = mvfilter(match(tactics,"[^-]")) | stats values(tactics) as tactics values(action) as action values(src) as src values(arn) as arn by _time,agent | sort + count </query>
+          <earliest>$timepicker.earliest$</earliest>
+          <latest>$timepicker.latest$</latest>
+        </search>
+        <drilldown>
+          <unset token="agent"></unset>
+          <unset token="agent_field"></unset>
+          <unset token="agent_value"></unset>
+          <unset token="agent_tactic2"></unset>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Rare Actions / Agents / ARNs by Source</title>
+      <table>
+        <search>
+          <query>index=cloudtrail NOT action=AssumeRole $filter$ | eval tactics = mvappend(tactic1,tactic2) , tactics = mvfilter(match(tactics,"[^-]")) | stats count as "count" values(tactics) as tactics dc(action) as "dc_actions" values(action) as action dc(agent) as dc_agents values(agent) as agents dc(arn) as dc_arns values(arn) as arn by src | sort + count</query>
+          <earliest>$timepicker.earliest$</earliest>
+          <latest>$timepicker.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <condition field="count"></condition>
+          <condition field="dc_actions"></condition>
+          <condition field="dc_agents"></condition>
+          <condition field="dc_arns"></condition>
+          <condition>
+          <set token="src">$row.src$</set>
+          <set token="src_field">$click.name2$</set>
+          <set token="src_value">$click.value2$</set>
+          <eval token="src_field">case(src_field="tactics","tactic1",src_field="sources","src",src_field="agents","agent",true(),src_field)</eval>
+          <eval token="src_tactic2">if(src_field="tactic1","OR tactic2=\"".src_value."\"","*")</eval>
+          </condition>
+        </drilldown>
+      </table>
+    </panel>
+    <panel depends="$src$">
+      <title>$src$ + $src_field$:$src_value$</title>
+      <table>
+        <search>
+          <query>index=cloudtrail src="$src$" $src_field$="$src_value$" $src_tactic2$ NOT action=AssumeRole $filter$ | eval tactics = mvappend(tactic1,tactic2) , tactics = mvfilter(match(tactics,"[^-]")) | stats values(tactics) as tactics values(action) as action values(agent) as agents values(arn) as arn by _time, src | sort + count </query>
+          <earliest>$timepicker.earliest$</earliest>
+          <latest>$timepicker.latest$</latest>
+        </search>
+        <drilldown>
+          <unset token="src"></unset>
+          <unset token="src_field"></unset>
+          <unset token="src_value"></unset>
+          <unset token="src_tactic2"></unset>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>
